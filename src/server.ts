@@ -14,8 +14,9 @@ const CORS: Record<string, string> = {
 
 function extractTarget(requestUrl: string): URL | null {
   try {
-    const url = new URL(requestUrl, 'http://localhost');
-    const target = url.searchParams.get('target');
+    const idx = requestUrl.indexOf('?target=');
+    if (idx === -1) return null;
+    const target = decodeURIComponent(requestUrl.slice(idx + 8));
     if (!target) return null;
     const parsed = new URL(target);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
@@ -96,6 +97,9 @@ function handleProxy(req: http.IncomingMessage, res: http.ServerResponse, target
           res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
         }
 
+        proxyRes.on('error', () => {
+          if (!res.writableEnded) res.end();
+        });
         proxyRes.pipe(res);
       },
     );
